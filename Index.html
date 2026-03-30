@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plano de Leitura NT - Supabase Realtime</title>
+  <style>
+    :root{
+      --bg:#f4f6f2;
+      --card:#ffffff;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --green:#587b23;
+      --green2:#6f9330;
+      --green3:#8baa52;
+      --line:#d9dfd3;
+      --soft:#eef4e8;
+      --warn:#fff7d6;
+      --danger:#b91c1c;
+      --shadow:0 12px 32px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(111,147,48,.12), transparent 22%),
+        linear-gradient(180deg,#eef4e8 0%, #f7f8f5 100%);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:16px}
+    .hero{
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff;border-radius:24px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px;
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+    }
+    .hero h1{margin:0 0 6px 0;font-size:clamp(22px,3vw,34px);line-height:1.05}
+    .hero p{margin:0;color:rgba(255,255,255,.95);font-size:14px}
+    .hero-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{
+      border:none;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;
+      transition:transform .08s ease, opacity .2s ease;
+    }
+    .btn:hover{opacity:.96}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-secondary{background:#e8efe0;color:#24400a}
+    .btn-ghost{background:#f5f5f5;color:#222}
+    .btn-danger{background:#fee2e2;color:var(--danger)}
+    .btn-gold{background:#fff4cf;color:#7a5a00}
+    .btn-menu{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.25)}
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;
+    }
+    .grid{
+      display:grid;grid-template-columns:.95fr 1.05fr;gap:16px;margin-bottom:16px;
+    }
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .stat{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:16px;min-height:120px}
+    .stat small{display:block;color:var(--muted);font-weight:700;margin-bottom:8px}
+    .big{font-size:30px;font-weight:800;line-height:1;margin-bottom:6px}
+    .sub{font-size:14px;color:var(--muted);line-height:1.35}
+    .progress-outer{margin-top:10px;height:10px;background:#e5eadf;border-radius:999px;overflow:hidden}
+    .progress-inner{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--green3));border-radius:999px;transition:.25s ease}
+    .duo-card{margin-top:12px;background:linear-gradient(180deg,#fafcf8,#f3f8ee)}
+    .status{
+      margin-top:12px;padding:12px 14px;border-radius:12px;background:#f8faf6;border:1px solid var(--line);
+      font-size:13px;line-height:1.45
+    }
+    .status strong{color:#365314}
+    .quick-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    .table-card h2{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px 0}
+    .hint{font-size:12px;color:var(--muted);line-height:1.4}
+    table{width:100%;border-collapse:collapse}
+    thead th{
+      background:#f7faf4;border-bottom:2px solid var(--line);padding:12px 8px;font-size:13px;color:#374151;text-align:left;
+      position:sticky;top:0;z-index:2;
+    }
+    tbody td{border-bottom:1px solid #edf0e9;padding:10px 8px;font-size:14px;vertical-align:middle}
+    tbody tr:hover{background:#fafcf8}
+    tbody tr.today{background:#fffbe8}
+    tbody tr.both-done{background:#f1f8eb}
+    .day-num{font-weight:800;color:var(--green);min-width:44px}
+    .reading{font-weight:700}
+    .meta{color:var(--muted);font-size:12px;margin-top:3px}
+    .checkcell{text-align:center;width:120px}
+    input[type="checkbox"]{transform:scale(1.3);cursor:pointer;accent-color:var(--green)}
+    .pill{
+      display:inline-block;padding:4px 9px;border-radius:999px;background:#eef4e8;color:#335b05;
+      font-size:12px;font-weight:700;margin-right:6px;
+    }
+
+    /* Drawer */
+    .overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.32);backdrop-filter:blur(2px);
+      opacity:0;pointer-events:none;transition:.18s ease;z-index:19;
+    }
+    .overlay.open{opacity:1;pointer-events:auto}
+    .drawer{
+      position:fixed;top:0;right:0;height:100vh;width:min(92vw,420px);background:#fff;box-shadow:-8px 0 30px rgba(0,0,0,.14);
+      transform:translateX(100%);transition:.22s ease;z-index:20;display:flex;flex-direction:column;
+      border-left:1px solid var(--line);
+    }
+    .drawer.open{transform:translateX(0)}
+    .drawer-head{
+      padding:16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;
+      background:#fbfcfa;
+    }
+    .drawer-title{font-size:18px;font-weight:800}
+    .drawer-body{padding:16px;overflow:auto}
+    .section{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+    .section summary{
+      list-style:none;cursor:pointer;padding:14px 14px;font-weight:800;background:#fafcf8;display:flex;justify-content:space-between;align-items:center;
+    }
+    .section summary::-webkit-details-marker{display:none}
+    .section .content{padding:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:700}
+    input, textarea{
+      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;outline:none;background:#fff;
+    }
+    textarea{min-height:140px;resize:vertical;font-family:Consolas, monospace}
+    .warn{
+      background:var(--warn);border:1px solid #e8d58e;border-radius:14px;padding:12px;font-size:13px;line-height:1.45;margin-top:10px;
+    }
+    .footer-note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45}
+    .copy-wrap{position:relative}
+    .copy-btn{position:absolute;top:10px;right:10px;padding:8px 10px;font-size:12px}
+
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr}
+      .stats{grid-template-columns:1fr}
+      .row,.row3{grid-template-columns:1fr}
+      .hero{align-items:flex-start;flex-direction:column}
+      .hero-actions{justify-content:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div class="drawer-title">Menu e configurações</div>
+      <button class="btn btn-ghost" id="closeDrawerBtn">Fechar</button>
+    </div>
+    <div class="drawer-body">
+      <details class="section" open>
+        <summary>Supabase</summary>
+        <div class="content">
+          <div class="row">
+            <div>
+              <label for="supabaseUrl">Project URL</label>
+              <input id="supabaseUrl" placeholder="https://seu-projeto.supabase.co">
+            </div>
+            <div>
+              <label for="supabaseKey">Publishable / anon key</label>
+              <input id="supabaseKey" placeholder="sb_publishable_... ou anon key">
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button class="btn btn-primary" id="saveConfigBtn">Salvar configuração</button>
+            <button class="btn btn-ghost" id="testConfigBtn">Testar conexão</button>
+          </div>
+          <div class="warn">
+            Use a chave publicável/anon, nunca a service role.
+          </div>
+          <div class="status" id="configStatus">Aguardando configuração do Supabase.</div>
+        </div>
+      </details>
+
+      <details class="section">
+        <summary>Login</summary>
+        <div class="content">
+          <div class="row">
+            <div>
+              <label for="email">E-mail</label>
+              <input id="email" type="email" placeholder="voce@exemplo.com">
+            </div>
+            <div>
+              <label for="password">Senha</label>
+              <input id="password" type="password" placeholder="mínimo razoável">
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button class="btn btn-primary" id="signupBtn">Criar conta</button>
+            <button class="btn btn-secondary" id="loginBtn">Entrar</button>
+            <button class="btn btn-danger" id="logoutBtn">Sair</button>
+          </div>
+          <div class="status" id="authStatus">Ninguém logado ainda.</div>
+        </div>
+      </details>
+
+      <details class="section">
+        <summary>Dupla</summary>
+        <div class="content">
+          <div class="row3">
+            <div>
+              <label for="displayName">Seu nome no app</label>
+              <input id="displayName" placeholder="Gegeo ou Jojó">
+            </div>
+            <div>
+              <label for="newDuoName">Nome da dupla</label>
+              <input id="newDuoName" placeholder="Leitura Gegeo & Jojó">
+            </div>
+            <div>
+              <label for="joinCode">Código da dupla</label>
+              <input id="joinCode" placeholder="colar código aqui">
+            </div>
+          </div>
+          <div class="quick-actions">
+            <button class="btn btn-primary" id="createDuoBtn">Criar dupla</button>
+            <button class="btn btn-secondary" id="joinDuoBtn">Entrar com código</button>
+            <button class="btn btn-ghost" id="refreshBtn">Atualizar dados</button>
+          </div>
+          <div class="status" id="duoStatus">Você ainda não está em uma dupla.</div>
+        </div>
+      </details>
+
+      <details class="section">
+        <summary>SQL do Supabase</summary>
+        <div class="content">
+          <div class="copy-wrap">
+            <button class="btn btn-ghost copy-btn" data-copy="sqlSetup">Copiar SQL</button>
+            <textarea id="sqlSetup" readonly></textarea>
+          </div>
+          <div class="footer-note">
+            Cole isso no SQL Editor do Supabase. Depois a gente faz o passo a passo.
+          </div>
+        </div>
+      </details>
+    </div>
+  </aside>
+
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <h1>Plano de Leitura NT</h1>
+        <p>Só o que importa na frente. O resto fica no porão elegante do menu.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn btn-menu" id="openDrawerBtn">☰ Menu e configurações</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2 style="margin:0 0 12px 0">Painel da ofensiva</h2>
+        <div class="stats">
+          <div class="stat">
+            <small>🔥 Ofensiva conjunta</small>
+            <div class="big" id="jointStreak">0</div>
+            <div class="sub">Dias seguidos em que as duas concluíram juntas, começando do dia 1.</div>
+          </div>
+
+          <div class="stat">
+            <small>📅 Dia do plano hoje</small>
+            <div class="big" id="todayPlanDay">-</div>
+            <div class="sub" id="todayPlanText">Defina a data de início quando a dupla estiver pronta.</div>
+          </div>
+
+          <div class="stat">
+            <small>🌿 Leitora 1</small>
+            <div class="big" id="progress1">0%</div>
+            <div class="sub" id="progress1Text">0 de 184 dias marcados.</div>
+            <div class="progress-outer"><div class="progress-inner" id="bar1"></div></div>
+          </div>
+
+          <div class="stat">
+            <small>🌿 Leitora 2</small>
+            <div class="big" id="progress2">0%</div>
+            <div class="sub" id="progress2Text">0 de 184 dias marcados.</div>
+            <div class="progress-outer"><div class="progress-inner" id="bar2"></div></div>
+          </div>
+        </div>
+
+        <div class="card duo-card">
+          <h2 style="margin:0 0 10px 0">Resumo da dupla</h2>
+          <div class="big" id="bothDoneCount">0</div>
+          <div class="sub" id="duoSummary">Dias concluídos pelas duas juntas.</div>
+          <div class="progress-outer"><div class="progress-inner" id="barBoth"></div></div>
+          <div class="quick-actions">
+            <button class="btn btn-gold" id="markTodayBothBtn">Marcar hoje para as duas</button>
+            <button class="btn btn-ghost" id="todayBtn">Ir para hoje</button>
+          </div>
+          <div class="status" id="frontStatus"><strong>Status:</strong> Pronto para configurar.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 12px 0">Plano completo</h2>
+        <div class="hint">Quando as duas concluírem o mesmo dia, a linha fica verdinha.</div>
+        <div style="margin-top:10px;max-height:560px;overflow:auto;border-radius:12px">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:70px;">Dia</th>
+                <th>Leitura</th>
+                <th class="checkcell" id="thName1">Leitora 1</th>
+                <th class="checkcell" id="thName2">Leitora 2</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const plan = [
+      "Mateus 1","Mateus 2","Mateus 3","Mateus 4","Mateus 5","Mateus 6","Mateus 7","Mateus 8","Mateus 9","Mateus 10","Mateus 11","Mateus 12","Mateus 13","Mateus 14","Mateus 15","Mateus 16","Mateus 17","Mateus 18","Mateus 19","Mateus 20","Mateus 21","Mateus 22","Mateus 23","Mateus 24","Mateus 25","Mateus 26","Mateus 27","Mateus 28",
+      "Marcos 1","Marcos 2","Marcos 3","Marcos 4","Marcos 5","Marcos 6","Marcos 7","Marcos 8","Marcos 9","Marcos 10","Marcos 11","Marcos 12","Marcos 13","Marcos 14","Marcos 15","Marcos 16",
+      "Lucas 1","Lucas 2","Lucas 3","Lucas 4","Lucas 5","Lucas 6","Lucas 7","Lucas 8","Lucas 9","Lucas 10","Lucas 11","Lucas 12","Lucas 13","Lucas 14","Lucas 15","Lucas 16","Lucas 17","Lucas 18","Lucas 19","Lucas 20","Lucas 21","Lucas 22","Lucas 23","Lucas 24",
+      "João 1","João 2","João 3","João 4","João 5","João 6","João 7","João 8","João 9","João 10","João 11","João 12","João 13","João 14","João 15","João 16","João 17","João 18","João 19","João 20","João 21",
+      "Atos 1","Atos 2","Atos 3","Atos 4","Atos 5","Atos 6","Atos 7","Atos 8","Atos 9","Atos 10","Atos 11","Atos 12","Atos 13","Atos 14","Atos 15","Atos 16","Atos 17","Atos 18","Atos 19","Atos 20","Atos 21","Atos 22","Atos 23 - 24","Atos 25 - 26","Atos 27 - 28",
+      "Romanos 1 - 2","Romanos 3 - 4","Romanos 5 - 6","Romanos 7 - 8","Romanos 9 - 10","Romanos 11 - 12","Romanos 13 - 14","Romanos 15 - 16",
+      "1 Coríntios 1 - 2","1 Coríntios 3 - 4","1 Coríntios 5 - 6","1 Coríntios 7 - 8","1 Coríntios 9 - 10","1 Coríntios 11 - 12","1 Coríntios 13 - 14","1 Coríntios 15 - 16",
+      "2 Coríntios 1 - 2","2 Coríntios 3 - 4","2 Coríntios 5 - 6","2 Coríntios 7 - 8","2 Coríntios 9 - 10","2 Coríntios 11 - 13",
+      "Gálatas 1 - 2","Gálatas 3 - 4","Gálatas 5 - 6",
+      "Efésios 1 - 2","Efésios 3 - 4","Efésios 5 - 6",
+      "Filipenses 1 - 2","Filipenses 3 - 4",
+      "Colossenses 1 - 2","Colossenses 3 - 4",
+      "1 Tessalonicenses 1 - 3","1 Tessalonicenses 4 - 5",
+      "2 Tessalonicenses 1 - 3",
+      "1 Timóteo 1 - 2","1 Timóteo 3 - 4","1 Timóteo 5 - 6",
+      "2 Timóteo 1 - 2","2 Timóteo 3 - 4",
+      "Tito 1 - 2","Tito 3 - Filemon 1",
+      "Hebreus 1 - 2","Hebreus 3 - 4","Hebreus 5 - 6","Hebreus 7 - 8","Hebreus 9 - 10","Hebreus 11 - 12","Hebreus 13 - Tiago 1",
+      "Tiago 2 - 3","Tiago 4 - 5",
+      "1 Pedro 1 - 2","1 Pedro 3 - 4","1 Pedro 5 - 2 Pedro 1","2 Pedro 2 - 3",
+      "1 João 1 - 2","1 João 3 - 4","1 João 5 - 2 João","3 João - Judas",
+      "Apocalipse 1 - 2","Apocalipse 3 - 4","Apocalipse 5 - 6","Apocalipse 7 - 8","Apocalipse 9 - 10","Apocalipse 11 - 12","Apocalipse 13 - 14","Apocalipse 15 - 16","Apocalipse 17 - 18","Apocalipse 19 - 20","Apocalipse 21 - 22"
+    ];
+
+    const CONFIG_KEY = 'nt_supabase_config_v1';
+    const PROFILE_KEY = 'nt_profile_name_v1';
+
+    const sqlText = `
+create extension if not exists pgcrypto;
+
+create table if not exists public.duplas (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  invite_code text not null unique,
+  start_date date default current_date,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.dupla_membros (
+  id bigint generated always as identity primary key,
+  dupla_id uuid not null references public.duplas(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null,
+  created_at timestamptz not null default now(),
+  unique (dupla_id, user_id)
+);
+
+create table if not exists public.leituras (
+  id bigint generated always as identity primary key,
+  dupla_id uuid not null references public.duplas(id) on delete cascade,
+  dia integer not null,
+  referencia text not null,
+  done_by_user_1 boolean not null default false,
+  done_by_user_2 boolean not null default false,
+  updated_at timestamptz not null default now(),
+  unique (dupla_id, dia)
+);
+
+alter table public.duplas enable row level security;
+alter table public.dupla_membros enable row level security;
+alter table public.leituras enable row level security;
+
+drop policy if exists "duplas_select_member" on public.duplas;
+create policy "duplas_select_member" on public.duplas
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.dupla_membros dm
+    where dm.dupla_id = duplas.id
+      and dm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "duplas_insert_auth" on public.duplas;
+create policy "duplas_insert_auth" on public.duplas
+for insert to authenticated
+with check (created_by = auth.uid());
+
+drop policy if exists "dupla_membros_select_own_dupla" on public.dupla_membros;
+create policy "dupla_membros_select_own_dupla" on public.dupla_membros
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.dupla_membros dm
+    where dm.dupla_id = dupla_membros.dupla_id
+      and dm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "dupla_membros_insert_self" on public.dupla_membros;
+create policy "dupla_membros_insert_self" on public.dupla_membros
+for insert to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists "leituras_select_member" on public.leituras;
+create policy "leituras_select_member" on public.leituras
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.dupla_membros dm
+    where dm.dupla_id = leituras.dupla_id
+      and dm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "leituras_insert_member" on public.leituras;
+create policy "leituras_insert_member" on public.leituras
+for insert to authenticated
+with check (
+  exists (
+    select 1
+    from public.dupla_membros dm
+    where dm.dupla_id = leituras.dupla_id
+      and dm.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "leituras_update_member" on public.leituras;
+create policy "leituras_update_member" on public.leituras
+for update to authenticated
+using (
+  exists (
+    select 1
+    from public.dupla_membros dm
+    where dm.dupla_id = leituras.dupla_id
+      and dm.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.dupla_membros dm
+    where dm.dupla_id = leituras.dupla_id
+      and dm.user_id = auth.uid()
+  )
+);
+
+alter publication supabase_realtime add table public.leituras;
+`.trim();
+
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('overlay');
+    const openDrawerBtn = document.getElementById('openDrawerBtn');
+    const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+
+    const tbody = document.getElementById('tbody');
+    const configStatus = document.getElementById('configStatus');
+    const authStatus = document.getElementById('authStatus');
+    const duoStatus = document.getElementById('duoStatus');
+    const frontStatus = document.getElementById('frontStatus');
+    const sqlSetup = document.getElementById('sqlSetup');
+    const thName1 = document.getElementById('thName1');
+    const thName2 = document.getElementById('thName2');
+    const jointStreakEl = document.getElementById('jointStreak');
+    const todayPlanDayEl = document.getElementById('todayPlanDay');
+    const todayPlanTextEl = document.getElementById('todayPlanText');
+    const progress1El = document.getElementById('progress1');
+    const progress2El = document.getElementById('progress2');
+    const progress1TextEl = document.getElementById('progress1Text');
+    const progress2TextEl = document.getElementById('progress2Text');
+    const bothDoneCountEl = document.getElementById('bothDoneCount');
+    const duoSummary = document.getElementById('duoSummary');
+    const bar1 = document.getElementById('bar1');
+    const bar2 = document.getElementById('bar2');
+    const barBoth = document.getElementById('barBoth');
+
+    sqlSetup.value = sqlText;
+
+    let supabase = null;
+    let currentUser = null;
+    let currentDuo = null;
+    let currentMembers = [];
+    let currentReadings = [];
+    let currentMemberIndex = null;
+    let realtimeChannel = null;
+    let authListenerAttached = false;
+
+    function openDrawer() {
+      drawer.classList.add('open');
+      overlay.classList.add('open');
+    }
+    function closeDrawer() {
+      drawer.classList.remove('open');
+      overlay.classList.remove('open');
+    }
+
+    openDrawerBtn.addEventListener('click', openDrawer);
+    closeDrawerBtn.addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', closeDrawer);
+
+    document.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const target = document.getElementById(btn.dataset.copy);
+        await navigator.clipboard.writeText(target.value);
+        const old = btn.textContent;
+        btn.textContent = 'Copiado';
+        setTimeout(() => btn.textContent = old, 1200);
+      });
+    });
+
+    function getSavedConfig() {
+      try { return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}'); }
+      catch { return {}; }
+    }
+    function saveConfig(cfg) {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+    }
+
+    function setConfigStatus(text) {
+      configStatus.innerHTML = `<strong>Config:</strong> ${text}`;
+      frontStatus.innerHTML = `<strong>Status:</strong> ${text}`;
+    }
+    function setAuthStatus(text) {
+      authStatus.innerHTML = `<strong>Auth:</strong> ${text}`;
+      frontStatus.innerHTML = `<strong>Status:</strong> ${text}`;
+    }
+    function setDuoStatus(text) {
+      duoStatus.innerHTML = `<strong>Dupla:</strong> ${text}`;
+      frontStatus.innerHTML = `<strong>Status:</strong> ${text}`;
+    }
+
+    function restoreConfigInputs() {
+      const cfg = getSavedConfig();
+      document.getElementById('supabaseUrl').value = cfg.url || '';
+      document.getElementById('supabaseKey').value = cfg.key || '';
+      document.getElementById('displayName').value = localStorage.getItem(PROFILE_KEY) || '';
+    }
+
+    function buildClient() {
+      const url = document.getElementById('supabaseUrl').value.trim();
+      const key = document.getElementById('supabaseKey').value.trim();
+      if (!url || !key) {
+        setConfigStatus('Preencha URL e chave.');
+        return false;
+      }
+      supabase = createClient(url, key);
+      saveConfig({ url, key });
+      setConfigStatus('Configuração salva. Cliente criado.');
+      attachAuthListener();
+      return true;
+    }
+
+    function attachAuthListener() {
+      if (!supabase || authListenerAttached) return;
+      authListenerAttached = true;
+      supabase.auth.onAuthStateChange(async (_event, session) => {
+        currentUser = session?.user || null;
+        if (currentUser) {
+          setAuthStatus(`Logada como <strong>${currentUser.email}</strong>.`);
+          await loadCurrentDuo();
+        } else {
+          setAuthStatus('Ninguém logado.');
+          currentDuo = null;
+          currentMembers = [];
+          currentReadings = [];
+          stopRealtime();
+          renderAll();
+        }
+      });
+    }
+
+    function uniqueCode() {
+      return Math.random().toString(36).slice(2, 8).toUpperCase();
+    }
+    function percent(v) {
+      return Math.round((v / plan.length) * 100);
+    }
+    function countChecks(arr) {
+      return arr.filter(Boolean).length;
+    }
+    function calcBothDoneCount() {
+      let n = 0;
+      for (const row of currentReadings) if (row.done_by_user_1 && row.done_by_user_2) n++;
+      return n;
+    }
+    function calcStreakBoth() {
+      let streak = 0;
+      for (const row of currentReadings.sort((a,b) => a.dia - b.dia)) {
+        if (row.done_by_user_1 && row.done_by_user_2) streak++;
+        else break;
+      }
+      return streak;
+    }
+    function getTodayPlanDay() {
+      if (!currentDuo?.start_date) return null;
+      const start = new Date(currentDuo.start_date + 'T00:00:00');
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return Math.floor((today - start) / 86400000) + 1;
+    }
+    function getSortedMembers() {
+      return [...currentMembers].sort((a,b) => a.created_at.localeCompare(b.created_at));
+    }
+    function getDoneArrays() {
+      const done1 = Array(plan.length).fill(false);
+      const done2 = Array(plan.length).fill(false);
+      for (const row of currentReadings) {
+        const i = row.dia - 1;
+        if (i >= 0 && i < plan.length) {
+          done1[i] = !!row.done_by_user_1;
+          done2[i] = !!row.done_by_user_2;
+        }
+      }
+      return { done1, done2 };
+    }
+
+    function renderStats() {
+      const { done1, done2 } = getDoneArrays();
+      const c1 = countChecks(done1);
+      const c2 = countChecks(done2);
+      const both = calcBothDoneCount();
+      const members = getSortedMembers();
+
+      thName1.textContent = members[0]?.display_name || 'Leitora 1';
+      thName2.textContent = members[1]?.display_name || 'Leitora 2';
+
+      jointStreakEl.textContent = calcStreakBoth();
+      bothDoneCountEl.textContent = both;
+      duoSummary.textContent = currentDuo ? `${currentDuo.nome} • código ${currentDuo.invite_code}` : 'Dias concluídos pelas duas juntas.';
+
+      progress1El.textContent = percent(c1) + '%';
+      progress2El.textContent = percent(c2) + '%';
+      progress1TextEl.textContent = `${c1} de ${plan.length} dias marcados.`;
+      progress2TextEl.textContent = `${c2} de ${plan.length} dias marcados.`;
+      bar1.style.width = percent(c1) + '%';
+      bar2.style.width = percent(c2) + '%';
+      barBoth.style.width = percent(both) + '%';
+
+      const day = getTodayPlanDay();
+      if (!currentDuo) {
+        todayPlanDayEl.textContent = '-';
+        todayPlanTextEl.textContent = 'Entre numa dupla para ativar o plano.';
+      } else if (day < 1) {
+        todayPlanDayEl.textContent = '0';
+        todayPlanTextEl.textContent = 'A data inicial está no futuro.';
+      } else if (day > plan.length) {
+        todayPlanDayEl.textContent = plan.length;
+        todayPlanTextEl.textContent = 'Plano concluído. Fim bonito.';
+      } else {
+        todayPlanDayEl.textContent = day;
+        todayPlanTextEl.textContent = `Leitura prevista para hoje: ${plan[day - 1]}.`;
+      }
+    }
+
+    function renderTable() {
+      const day = getTodayPlanDay();
+      const map = new Map(currentReadings.map(r => [r.dia, r]));
+      tbody.innerHTML = '';
+
+      for (let i = 0; i < plan.length; i++) {
+        const dia = i + 1;
+        const row = map.get(dia) || {
+          dia,
+          referencia: plan[i],
+          done_by_user_1: false,
+          done_by_user_2: false
+        };
+
+        const tr = document.createElement('tr');
+        if (day === dia) tr.classList.add('today');
+        if (row.done_by_user_1 && row.done_by_user_2) tr.classList.add('both-done');
+
+        const tdDay = document.createElement('td');
+        tdDay.innerHTML = `<span class="day-num">${String(dia).padStart(2,'0')}</span>`;
+
+        const tdReading = document.createElement('td');
+        let tags = '';
+        if (day === dia) tags += `<span class="pill">Hoje</span>`;
+        if (row.done_by_user_1 && row.done_by_user_2) tags += `<span class="pill">Dupla ok</span>`;
+        tdReading.innerHTML = `<div class="reading">${plan[i]}</div><div class="meta">${tags}</div>`;
+
+        const td1 = document.createElement('td');
+        td1.className = 'checkcell';
+        const cb1 = document.createElement('input');
+        cb1.type = 'checkbox';
+        cb1.checked = !!row.done_by_user_1;
+        cb1.disabled = !currentDuo || currentMemberIndex === null;
+        cb1.addEventListener('change', () => updateReading(dia, 1, cb1.checked));
+        td1.appendChild(cb1);
+
+        const td2 = document.createElement('td');
+        td2.className = 'checkcell';
+        const cb2 = document.createElement('input');
+        cb2.type = 'checkbox';
+        cb2.checked = !!row.done_by_user_2;
+        cb2.disabled = !currentDuo || currentMemberIndex === null;
+        cb2.addEventListener('change', () => updateReading(dia, 2, cb2.checked));
+        td2.appendChild(cb2);
+
+        tr.appendChild(tdDay);
+        tr.appendChild(tdReading);
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderAll() {
+      renderStats();
+      renderTable();
+    }
+
+    async function testConnection() {
+      if (!buildClient()) return;
+      const { error } = await supabase.auth.getSession();
+      if (error) setConfigStatus(`Cliente criado, mas houve erro ao falar com Auth: ${error.message}`);
+      else setConfigStatus('Conexão básica ok. Agora faça login.');
+    }
+
+    async function signUp() {
+      if (!supabase && !buildClient()) return;
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) return setAuthStatus('Preencha e-mail e senha.');
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setAuthStatus(`Falha ao criar conta: ${error.message}`);
+      else setAuthStatus('Conta criada. Se o projeto exigir confirmação por e-mail, confirme antes de entrar.');
+    }
+
+    async function signIn() {
+      if (!supabase && !buildClient()) return;
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) return setAuthStatus('Preencha e-mail e senha.');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setAuthStatus(`Falha no login: ${error.message}`);
+      else {
+        currentUser = data.user;
+        setAuthStatus(`Logada como <strong>${data.user.email}</strong>.`);
+        await loadCurrentDuo();
+        closeDrawer();
+      }
+    }
+
+    async function signOut() {
+      if (!supabase) return;
+      await supabase.auth.signOut();
+      currentUser = null;
+      currentDuo = null;
+      currentMembers = [];
+      currentReadings = [];
+      stopRealtime();
+      renderAll();
+      setAuthStatus('Sessão encerrada.');
+      setDuoStatus('Você saiu e a dupla foi descarregada desta tela.');
+    }
+
+    async function createDuo() {
+      if (!currentUser) return setDuoStatus('Faça login antes.');
+      const displayName = document.getElementById('displayName').value.trim();
+      const duoName = document.getElementById('newDuoName').value.trim();
+      if (!displayName || !duoName) return setDuoStatus('Preencha seu nome no app e o nome da dupla.');
+
+      localStorage.setItem(PROFILE_KEY, displayName);
+
+      let invite = uniqueCode();
+      let created = null;
+      let lastError = null;
+
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const insertRes = await supabase
+          .from('duplas')
+          .insert({
+            nome: duoName,
+            invite_code: invite,
+            created_by: currentUser.id,
+            start_date: new Date().toISOString().slice(0,10)
+          });
+
+        if (insertRes.error) {
+          lastError = insertRes.error;
+          invite = uniqueCode();
+          continue;
+        }
+
+        const fetchRes = await supabase
+          .from('duplas')
+          .select('*')
+          .eq('invite_code', invite)
+          .single();
+
+        if (fetchRes.error) {
+          lastError = fetchRes.error;
+          invite = uniqueCode();
+          continue;
+        }
+
+        created = fetchRes.data;
+        break;
+      }
+
+      if (!created) {
+        const msg = lastError?.message || 'erro não identificado';
+        return setDuoStatus(`Falha ao criar dupla: ${msg}`);
+      }
+
+      const joinRes = await supabase.from('dupla_membros').insert({
+        dupla_id: created.id,
+        user_id: currentUser.id,
+        display_name: displayName
+      });
+
+      if (joinRes.error) {
+        return setDuoStatus(`Dupla criada, mas falhou ao inserir membro: ${joinRes.error.message}`);
+      }
+
+      await ensureReadings(created.id);
+      await loadCurrentDuo();
+      setDuoStatus(`Dupla criada com sucesso. Código: <strong>${created.invite_code}</strong>`);
+      closeDrawer();
+    }
+
+    async function joinDuo() {
+      if (!currentUser) return setDuoStatus('Faça login antes.');
+      const displayName = document.getElementById('displayName').value.trim();
+      const code = document.getElementById('joinCode').value.trim().toUpperCase();
+      if (!displayName || !code) return setDuoStatus('Preencha seu nome no app e o código da dupla.');
+
+      localStorage.setItem(PROFILE_KEY, displayName);
+
+      const { data: duo, error } = await supabase
+        .from('duplas')
+        .select('*')
+        .eq('invite_code', code)
+        .single();
+
+      if (error || !duo) return setDuoStatus('Código da dupla não encontrado.');
+
+      const { error: joinError } = await supabase
+        .from('dupla_membros')
+        .upsert({
+          dupla_id: duo.id,
+          user_id: currentUser.id,
+          display_name: displayName
+        }, { onConflict: 'dupla_id,user_id' });
+
+      if (joinError) return setDuoStatus(`Falha ao entrar na dupla: ${joinError.message}`);
+
+      await ensureReadings(duo.id);
+      await loadCurrentDuo();
+      setDuoStatus(`Você entrou na dupla <strong>${duo.nome}</strong>.`);
+      closeDrawer();
+    }
+
+    async function ensureReadings(duplaId) {
+      const rows = plan.map((ref, idx) => ({
+        dupla_id: duplaId,
+        dia: idx + 1,
+        referencia: ref
+      }));
+      await supabase.from('leituras').upsert(rows, { onConflict: 'dupla_id,dia', ignoreDuplicates: false });
+    }
+
+    async function loadCurrentDuo() {
+      if (!currentUser) return;
+      const { data: memberships, error } = await supabase
+        .from('dupla_membros')
+        .select('*, duplas(*)')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        setDuoStatus(`Erro ao carregar dupla: ${error.message}`);
+        return;
+      }
+
+      if (!memberships || memberships.length === 0) {
+        currentDuo = null;
+        currentMembers = [];
+        currentReadings = [];
+        currentMemberIndex = null;
+        stopRealtime();
+        renderAll();
+        setDuoStatus('Você não está em nenhuma dupla ainda.');
+        return;
+      }
+
+      currentDuo = memberships[0].duplas;
+      await loadDuoMembers();
+      await loadReadings();
+      subscribeRealtime();
+      renderAll();
+
+      const myMember = getSortedMembers().findIndex(m => m.user_id === currentUser.id);
+      currentMemberIndex = myMember;
+      const members = getSortedMembers();
+      setDuoStatus(`Dupla ativa: <strong>${currentDuo.nome}</strong> • código <strong>${currentDuo.invite_code}</strong> • membros: ${members.map(m => m.display_name).join(' e ')}`);
+    }
+
+    async function loadDuoMembers() {
+      if (!currentDuo) return;
+      const { data } = await supabase
+        .from('dupla_membros')
+        .select('*')
+        .eq('dupla_id', currentDuo.id)
+        .order('created_at', { ascending: true });
+      currentMembers = data || [];
+      currentMemberIndex = getSortedMembers().findIndex(m => m.user_id === currentUser?.id);
+    }
+
+    async function loadReadings() {
+      if (!currentDuo) return;
+      const { data } = await supabase
+        .from('leituras')
+        .select('*')
+        .eq('dupla_id', currentDuo.id)
+        .order('dia', { ascending: true });
+      currentReadings = data || [];
+    }
+
+    function stopRealtime() {
+      if (realtimeChannel && supabase) supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+
+    function subscribeRealtime() {
+      if (!supabase || !currentDuo) return;
+      stopRealtime();
+      realtimeChannel = supabase
+        .channel(`leituras-${currentDuo.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'leituras',
+          filter: `dupla_id=eq.${currentDuo.id}`
+        }, async () => {
+          await loadReadings();
+          renderAll();
+        })
+        .subscribe();
+    }
+
+    async function updateReading(dia, targetColumnNumber, checked) {
+      if (!currentDuo) return setDuoStatus('Entre numa dupla antes de marcar.');
+      if (currentMemberIndex === null || currentMemberIndex === -1) return setDuoStatus('Seu vínculo na dupla não foi reconhecido.');
+
+      const column = targetColumnNumber === 1 ? 'done_by_user_1' : 'done_by_user_2';
+
+      if ((currentMemberIndex === 0 && targetColumnNumber !== 1) || (currentMemberIndex === 1 && targetColumnNumber !== 2)) {
+        setDuoStatus('Você só pode marcar a sua própria coluna.');
+        await loadReadings();
+        renderAll();
+        return;
+      }
+
+      const { error } = await supabase
+        .from('leituras')
+        .update({ [column]: checked, updated_at: new Date().toISOString() })
+        .eq('dupla_id', currentDuo.id)
+        .eq('dia', dia);
+
+      if (error) {
+        setDuoStatus(`Falha ao marcar: ${error.message}`);
+        await loadReadings();
+        renderAll();
+        return;
+      }
+
+      await loadReadings();
+      renderAll();
+    }
+
+    async function markTodayBoth() {
+      if (!currentDuo) return setDuoStatus('Entre numa dupla antes.');
+      const day = getTodayPlanDay();
+      if (!day || day < 1 || day > plan.length) return setDuoStatus('Hoje não caiu em um dia válido do plano.');
+      const { error } = await supabase
+        .from('leituras')
+        .update({
+          done_by_user_1: true,
+          done_by_user_2: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('dupla_id', currentDuo.id)
+        .eq('dia', day);
+
+      if (error) return setDuoStatus(`Falha ao marcar hoje para as duas: ${error.message}`);
+      await loadReadings();
+      renderAll();
+      setDuoStatus(`Dia ${day} marcado para as duas.`);
+    }
+
+    function goToToday() {
+      const day = getTodayPlanDay();
+      if (!day || day < 1 || day > plan.length) return;
+      const row = tbody.children[day - 1];
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.getElementById('saveConfigBtn').addEventListener('click', () => buildClient());
+    document.getElementById('testConfigBtn').addEventListener('click', () => testConnection());
+    document.getElementById('signupBtn').addEventListener('click', () => signUp());
+    document.getElementById('loginBtn').addEventListener('click', () => signIn());
+    document.getElementById('logoutBtn').addEventListener('click', () => signOut());
+    document.getElementById('createDuoBtn').addEventListener('click', () => createDuo());
+    document.getElementById('joinDuoBtn').addEventListener('click', () => joinDuo());
+    document.getElementById('refreshBtn').addEventListener('click', async () => { await loadCurrentDuo(); });
+    document.getElementById('markTodayBothBtn').addEventListener('click', () => markTodayBoth());
+    document.getElementById('todayBtn').addEventListener('click', () => goToToday());
+
+    restoreConfigInputs();
+    renderAll();
+
+    const cfg = getSavedConfig();
+    if (cfg.url && cfg.key) {
+      buildClient();
+      supabase.auth.getSession().then(({ data }) => {
+        currentUser = data.session?.user || null;
+        if (currentUser) {
+          setAuthStatus(`Logada como <strong>${currentUser.email}</strong>.`);
+          loadCurrentDuo();
+        } else {
+          setAuthStatus('Config ok. Faça login.');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
